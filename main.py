@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Response, status
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -43,7 +43,7 @@ def get_posts():
 	return context
 
 
-@app.post('/posts/')
+@app.post('/posts/', status_code=201)
 def post_create(post: Post):
 	new_post = post.dict()
 	new_post['id'] = len(my_posts) + 1
@@ -52,3 +52,16 @@ def post_create(post: Post):
 		'data': new_post
 	}
 	return context
+
+@app.get('/posts/{pk}')
+def get_post(pk: int, response: Response):
+	data = {}
+	try:
+		data['post'] = my_posts[pk - 1]
+	except IndexError:
+		raise HTTPException(status_code=404, detail=f'id {pk} was not found.')
+	context = {
+		'data': data
+	}
+	return context
+	
