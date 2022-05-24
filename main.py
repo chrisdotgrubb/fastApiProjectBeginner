@@ -11,6 +11,7 @@ class Post(BaseModel):
 	content: str
 	published: bool = True
 	rating: Optional[int] = None
+	is_active: bool = True
 
 
 my_posts = [
@@ -19,14 +20,16 @@ my_posts = [
 		'content': 'content post 1',
 		'published': True,
 		'rating': 3,
-		'id': 1
+		'id': 1,
+		'is_active': True
 	},
 	{
 		'title': 'title of post 2',
 		'content': 'content post 2',
 		'published': True,
 		'rating': 4,
-		'id': 2
+		'id': 2,
+		'is_active': True
 	}]
 
 
@@ -53,15 +56,36 @@ def post_create(post: Post):
 	}
 	return context
 
-@app.get('/posts/{pk}')
+@app.get('/posts/{pk}/')
 def get_post(pk: int, response: Response):
 	data = {}
 	try:
 		data['post'] = my_posts[pk - 1]
+		if not data['post']['is_active']:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
 	except IndexError:
-		raise HTTPException(status_code=404, detail=f'id {pk} was not found.')
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
 	context = {
 		'data': data
 	}
 	return context
 	
+@app.delete('/posts/{pk}/', status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(pk: int):
+	try:
+		my_posts[pk - 1]['is_active'] = False
+	except IndexError:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
+	return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@app.put('/posts/{pk}/')
+def update_post(pk: int, post: Post):
+	try:
+		my_posts[pk - 1] = post.dict()
+		item = my_posts[pk - 1]
+		item['id'] = pk
+	except IndexError:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
+	return {'data': item}
+	
+
