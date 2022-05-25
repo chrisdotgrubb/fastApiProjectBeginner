@@ -12,9 +12,10 @@ app = FastAPI()
 class Post(BaseModel):
 	title: str
 	content: str
-	published: bool = True
+	is_published: bool = True
 	rating: Optional[int] = None
 	is_active: bool = True
+
 
 host = 'localhost'
 db = 'fastAPIBeginner'
@@ -31,24 +32,6 @@ while True:
 		print('db connection failed')
 		print(error)
 		sleep(3)
-	
-my_posts = [
-	{
-		'title': 'title of post 1',
-		'content': 'content post 1',
-		'published': True,
-		'rating': 3,
-		'id': 1,
-		'is_active': True
-	},
-	{
-		'title': 'title of post 2',
-		'content': 'content post 2',
-		'published': True,
-		'rating': 4,
-		'id': 2,
-		'is_active': True
-	}]
 
 
 @app.get('/')
@@ -61,51 +44,80 @@ def get_posts():
 	cursor.execute('SELECT * FROM posts')
 	posts = cursor.fetchall()
 	context = {
-		'data': posts
+		'data': {'posts': posts}
 	}
 	return context
 
 
 @app.post('/posts/', status_code=201)
 def create_post(post: Post):
-	new_post = post.dict()
-	new_post['id'] = len(my_posts) + 1
-	my_posts.append(new_post)
+	cursor.execute(
+		"""
+		INSERT INTO posts(title, content, is_published, rating, is_active)
+		VALUES (%s, %s, %s, %s, %s)
+		RETURNING *
+		""",
+		vars=(post.title, post.content, post.is_published, post.rating, post.is_active))
+	new_post = cursor.fetchone()
+	conn.commit()
 	context = {
-		'data': new_post
+		'data': {'post': new_post}
 	}
 	return context
+
 
 @app.get('/posts/{pk}/')
 def get_post(pk: int, response: Response):
-	data = {}
-	try:
-		data['post'] = my_posts[pk - 1]
-		if not data['post']['is_active']:
-			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
-	except IndexError:
+	cursor.execute(
+		"""
+		SELECT *
+		FROM posts
+		WHERE id = %s
+		AND is_published = true
+		AND is_active = true
+		""",
+		vars=(pk,)
+	)
+	post = cursor.fetchone()
+	if not post:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
 	context = {
-		'data': data
+		'data': {'post': post}
 	}
 	return context
-	
+
+
 @app.delete('/posts/{pk}/', status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(pk: int):
-	try:
-		my_posts[pk - 1]['is_active'] = False
-	except IndexError:
+	cursor.execute(
+		"""
+		DELETE
+		FROM posts
+		WHERE id = %s
+		RETURNING *
+		""",
+		vars=(pk,)
+	)
+	post = cursor.fetchone()
+	conn.commit()
+	if not post:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
 	return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+
 @app.put('/posts/{pk}/')
 def update_post(pk: int, post: Post):
-	try:
-		my_posts[pk - 1] = post.dict()
-		item = my_posts[pk - 1]
-		item['id'] = pk
-	except IndexError:
+	cursor.execute(
+		"""
+		UPDATE posts
+		SET title = %s, content = %s, is_published = %s, rating = %s
+		WHERE id = %s
+		RETURNING *
+		""",
+		vars=(post.title, post.content, post.is_published, post.rating, pk)
+	)
+	updated = cursor.fetchone()
+	conn.commit()
+	if not updated:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
-	return {'data': item}
-	
-
+	return {'data': {'post': updated}}
