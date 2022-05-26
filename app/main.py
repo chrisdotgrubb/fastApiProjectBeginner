@@ -1,44 +1,38 @@
+from typing import List
+
 from fastapi import FastAPI, HTTPException, Response, status, Depends
 from sqlalchemy.orm import Session
 
-from .models import PostIn, Post, Base
 from .database import engine, get_db
+from .models import Post, Base
+from .schemas import PostCreate, PostUpdate, PostOut
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 
-@app.get('/posts/')
+@app.get('/posts/', response_model=List[PostOut])
 def get_posts(db: Session = Depends(get_db)):
 	posts = db.query(Post).all()
-	context = {
-		'data': {'posts': posts}
-	}
-	return context
+	return posts
 
 
-@app.post('/posts/', status_code=201)
-def create_post(post: PostIn, db: Session = Depends(get_db)):
+@app.post('/posts/', status_code=201, response_model=PostOut)
+def create_post(post: PostCreate, db: Session = Depends(get_db)):
 	new_post = Post(**post.dict())
 	db.add(new_post)
 	db.commit()
 	db.refresh(new_post)
-	context = {
-		'data': {'post': new_post}
-	}
-	return context
+	return new_post
 
 
-@app.get('/posts/{pk}/')
+@app.get('/posts/{pk}/', response_model=PostOut)
 def get_post(pk: int, db: Session = Depends(get_db)):
 	post = db.query(Post).filter(Post.id == pk).first()
 	if not post:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
-	context = {
-		'data': {'post': post}
-	}
-	return context
+	return post
 
 
 @app.delete('/posts/{pk}/', status_code=status.HTTP_204_NO_CONTENT)
@@ -51,12 +45,12 @@ def delete_post(pk: int, db: Session = Depends(get_db)):
 	return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.put('/posts/{pk}/')
-def update_post(pk: int, post: PostIn, db: Session = Depends(get_db)):
+@app.put('/posts/{pk}/', response_model=PostOut)
+def update_post(pk: int, post: PostUpdate, db: Session = Depends(get_db)):
 	qs = db.query(Post).filter(Post.id == pk)
 	
 	if not qs.first():
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
 	qs.update(post.dict(), synchronize_session=False)
 	db.commit()
-	return {'data': {'post': qs.first()}}
+	return qs.first()
