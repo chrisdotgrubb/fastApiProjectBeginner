@@ -6,10 +6,13 @@ from app.models import User
 from app.schemas import UserCreate, UserOut
 from app.utils import hash_password
 
-router = APIRouter()
+router = APIRouter(
+	prefix='/users',
+	tags=['users', ]
+)
 
 
-@router.post('/users/', status_code=201, response_model=UserOut)
+@router.post('/', status_code=201, response_model=UserOut)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
 	user.password = hash_password(user.password)
 	new_user = User(**user.dict())
@@ -19,7 +22,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 	return new_user
 
 
-@router.get('/users/{pk}/', response_model=UserOut)
+@router.get('/{pk}/', response_model=UserOut)
 def get_user(pk: int, db: Session = Depends(get_db)):
 	user = db.query(User).filter(User.id == pk).first()
 	

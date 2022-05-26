@@ -54,7 +54,8 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
 	email: EmailStr
 	password: str
-	
+
+
 class UserOut(BaseModel):
 	id: str
 	email: EmailStr
@@ -69,5 +70,8 @@ class UserOut(BaseModel):
 				"created_at": datetime.now(),
 			}
 		}
-	
 
+
+class UserLogin(BaseModel):
+	email: EmailStr
+	password: str
