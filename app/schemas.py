@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class PostIn(BaseModel):
@@ -45,3 +45,29 @@ class PostOut(BaseModel):
 				"created_at": datetime.now(),
 			}
 		}
+
+
+class UserBase(BaseModel):
+	pass
+
+
+class UserCreate(UserBase):
+	email: EmailStr
+	password: str
+	
+class UserOut(BaseModel):
+	id: str
+	email: EmailStr
+	created_at: datetime
+	
+	class Config:
+		orm_mode = True
+		schema_extra = {
+			"example": {
+				"id": 1,
+				"email": "your@email.com",
+				"created_at": datetime.now(),
+			}
+		}
+	
+
