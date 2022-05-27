@@ -4,6 +4,7 @@ from fastapi import HTTPException, Response, status, Depends, APIRouter
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Post
+from app.oauth2 import get_current_user
 from app.schemas import PostCreate, PostUpdate, PostOut
 
 router = APIRouter(
@@ -19,7 +20,7 @@ def get_posts(db: Session = Depends(get_db)):
 
 
 @router.post('/', status_code=201, response_model=PostOut)
-def create_post(post: PostCreate, db: Session = Depends(get_db)):
+def create_post(post: PostCreate, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
 	new_post = Post(**post.dict())
 	db.add(new_post)
 	db.commit()
@@ -36,7 +37,7 @@ def get_post(pk: int, db: Session = Depends(get_db)):
 
 
 @router.delete('/{pk}/', status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(pk: int, db: Session = Depends(get_db)):
+def delete_post(pk: int, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
 	post = db.query(Post).filter(Post.id == pk)
 	if not post.first():
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
@@ -46,7 +47,7 @@ def delete_post(pk: int, db: Session = Depends(get_db)):
 
 
 @router.put('/{pk}/', response_model=PostOut)
-def update_post(pk: int, post: PostUpdate, db: Session = Depends(get_db)):
+def update_post(pk: int, post: PostUpdate, db: Session = Depends(get_db), user_id: int = Depends(get_current_user)):
 	qs = db.query(Post).filter(Post.id == pk)
 	
 	if not qs.first():
