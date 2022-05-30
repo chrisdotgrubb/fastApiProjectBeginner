@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, text, TIMESTAMP
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, text, TIMESTAMP
 
 from .database import Base
 
@@ -11,6 +11,7 @@ class Post(Base):
 	content = Column(String, nullable=False)
 	is_published = Column(Boolean, server_default='true', nullable=False)
 	created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+	user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
 
 
 class User(Base):

@@ -30,6 +30,7 @@ class PostUpdate(PostIn):
 
 class PostOut(BaseModel):
 	id: int
+	user_id: int
 	title: str
 	content: str
 	is_published: bool
@@ -40,6 +41,7 @@ class PostOut(BaseModel):
 		schema_extra = {
 			"example": {
 				"id": 1,
+				"user_id": 1,
 				"title": "Title of the post",
 				"content": "Content of the post",
 				"is_published": True,

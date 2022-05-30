@@ -20,8 +20,8 @@ def get_posts(db: Session = Depends(get_db)):
 
 
 @router.post('/', status_code=201, response_model=PostOut)
-def create_post(post: PostCreate, db: Session = Depends(get_db), user=Depends(get_current_user)):
-	new_post = Post(**post.dict())
+def create_post(post_in: PostCreate, db: Session = Depends(get_db), user=Depends(get_current_user)):
+	new_post = Post(user_id=user.id, **post_in.dict())
 	db.add(new_post)
 	db.commit()
 	db.refresh(new_post)
@@ -30,7 +30,7 @@ def create_post(post: PostCreate, db: Session = Depends(get_db), user=Depends(ge
 
 @router.get('/{pk}/', response_model=PostOut)
 def get_post(pk: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-	post = db.query(Post).filter(Post.id == pk).first()
+	post = db.query(Post).filter(Post.id == pk).one_or_none()
 	if not post:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
 	return post
@@ -38,20 +38,25 @@ def get_post(pk: int, db: Session = Depends(get_db), user=Depends(get_current_us
 
 @router.delete('/{pk}/', status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(pk: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-	post = db.query(Post).filter(Post.id == pk)
-	if not post.first():
+	qs = db.query(Post).filter(Post.id == pk)
+	post = qs.one_or_none()
+	if not post:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
-	post.delete(synchronize_session=False)
+	if post.user_id != user.id:
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f'id {pk} is not your post.')
+	
+	qs.delete(synchronize_session=False)
 	db.commit()
 	return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-
 @router.put('/{pk}/', response_model=PostOut)
-def update_post(pk: int, post: PostUpdate, db: Session = Depends(get_db), user=Depends(get_current_user)):
+def update_post(pk: int, post_in: PostUpdate, db: Session = Depends(get_db), user=Depends(get_current_user)):
 	qs = db.query(Post).filter(Post.id == pk)
-	
-	if not qs.first():
+	post = qs.one_or_none()
+	if not post:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'id {pk} was not found.')
-	qs.update(post.dict(), synchronize_session=False)
+	if post.user_id != user.id:
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f'id {pk} is not your post.')
+	qs.update(post_in.dict(), synchronize_session=False)
 	db.commit()
-	return qs.first()
+	return post
