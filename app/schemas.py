@@ -4,6 +4,31 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 
+class UserBase(BaseModel):
+	pass
+
+
+class UserCreate(UserBase):
+	email: EmailStr
+	password: str
+
+
+class UserOut(BaseModel):
+	id: str
+	email: EmailStr
+	created_at: datetime
+	
+	class Config:
+		orm_mode = True
+		schema_extra = {
+			"example": {
+				"id": 1,
+				"email": "your@email.com",
+				"created_at": datetime.now(),
+			}
+		}
+
+
 class PostIn(BaseModel):
 	title: str
 	content: str
@@ -35,6 +60,7 @@ class PostOut(BaseModel):
 	content: str
 	is_published: bool
 	created_at: datetime
+	user: UserOut
 	
 	class Config:
 		orm_mode = True
@@ -45,31 +71,6 @@ class PostOut(BaseModel):
 				"title": "Title of the post",
 				"content": "Content of the post",
 				"is_published": True,
-				"created_at": datetime.now(),
-			}
-		}
-
-
-class UserBase(BaseModel):
-	pass
-
-
-class UserCreate(UserBase):
-	email: EmailStr
-	password: str
-
-
-class UserOut(BaseModel):
-	id: str
-	email: EmailStr
-	created_at: datetime
-	
-	class Config:
-		orm_mode = True
-		schema_extra = {
-			"example": {
-				"id": 1,
-				"email": "your@email.com",
 				"created_at": datetime.now(),
 			}
 		}
